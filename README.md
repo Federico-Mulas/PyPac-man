@@ -4,7 +4,14 @@ A simple project to try pyglet (https://bitbucket.org/pyglet/pyglet/wiki/Home)
 ## Getting Started
 
 ### Prerequisites
+
   * [pyglet](https://bitbucket.org/pyglet/pyglet/wiki/Download)
+
+## Execute
+
+  ```
+    python3 ./src/PyPac-man.py
+  ```
 
 ## License
 
