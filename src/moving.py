@@ -2,6 +2,27 @@ import pyglet
 import base
 import pyglet.window.key as key_h
 
+import enum
+
+class Direction(enum.Enum):
+    """Direction enum represents the possible movements that pacman and ghosts can performself."""
+    UP = (None, 1, 270)     # (x movement, y movement, rotation)
+    DOWN = (None, -1, 90)
+    LEFT = (-1, None, 180)
+    RIGHT = (1, None, 0)
+
+    @classmethod
+    def get_direction(cls, sprite):
+        """Returns the enum value corresponding to the pressed key"""
+        if sprite.key_handler[key_h.UP]:
+            return cls.UP
+        if sprite.key_handler[key_h.LEFT]:
+            return cls.LEFT
+        if sprite.key_handler[key_h.DOWN]:
+            return cls.DOWN
+        if sprite.key_handler[key_h.RIGHT]:
+            return cls.RIGHT
+
 class MovingObject(pyglet.sprite.Sprite):
     batch = pyglet.graphics.Batch()
     collection = []
@@ -19,28 +40,23 @@ class MovingObject(pyglet.sprite.Sprite):
         return abs(x_dist) < min_x_dist and abs(y_dist) < min_y_dist
 
 
-    def update(self, dt = 0):
+    def update(self, move, dt = 0):
         if dt == 0:
             return
-        old_x = self.x
-        old_y = self.y
-        if self.key_handler[key_h.LEFT]:
-            self.rotation = 180
-            self.x -= self.velocity * dt
-        if self.key_handler[key_h.RIGHT]:
-            self.x += self.velocity * dt
-            self.rotation = 0
-        if self.key_handler[key_h.UP]:
-            self.y += self.velocity * dt
-            self.rotation = 270
-        if self.key_handler[key_h.DOWN]:
-            self.y -= self.velocity * dt
-            self.rotation = 90
+
+        old_coords = self.x, self.y
+
+        if move:
+            x_move, y_move, self.rotation = move.value
+
+            if x_move:
+                self.x += x_move * self.velocity * dt
+            elif y_move:
+                self.y += y_move * self.velocity * dt
 
         for wall in base.walls:
             if self.collision(wall):
-                self.x = old_x
-                self.y = old_y
+                self.x, self.y = old_coords
                 break
 
         self.check_bounds()
@@ -64,6 +80,10 @@ class Player(MovingObject):
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.pacman.img, *args, **kwargs)
         self.key_handler = key_h.KeyStateHandler()
+
+    def update(self, dt = 0):
+        movement = Direction.get_direction(self)
+        super().update(movement, dt)
 
 def update(dt):
     """ very simply but important function that update the status of all moving objects """
