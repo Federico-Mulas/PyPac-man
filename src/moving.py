@@ -19,7 +19,9 @@ class MovingObject(pyglet.sprite.Sprite):
         return abs(x_dist) < min_x_dist and abs(y_dist) < min_y_dist
 
 
-    def update(self, dt):
+    def update(self, dt = 0):
+        if dt == 0:
+            return
         old_x = self.x
         old_y = self.y
         if self.key_handler[key_h.LEFT]:
@@ -58,14 +60,9 @@ class MovingObject(pyglet.sprite.Sprite):
             self.y = min_y
 
 class Player(MovingObject):
-    pacman_img = pyglet.resource.image("pac-man.png")
-    pacman_img.height = base.wall_img.height
-    pacman_img.width = base.wall_img.width
-    pacman_img.anchor_x = pacman_img.width/2
-    pacman_img.anchor_y = pacman_img.height/2
 
     def __init__(self, *args, **kwargs):
-        MovingObject.__init__(self, img=Player.pacman_img, *args, **kwargs)
+        MovingObject.__init__(self, img=base.pacman.img, *args, **kwargs)
         self.key_handler = key_h.KeyStateHandler()
 
 def update(dt):
