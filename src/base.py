@@ -1,6 +1,6 @@
 import pyglet
 
-pyglet.resource.path = ['../resources']
+pyglet.resource.path = ['../resources', '../levels']
 pyglet.resource.reindex()
 
 window = pyglet.window.Window()

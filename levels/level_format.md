@@ -16,11 +16,13 @@ then the other rows represent how the filed it's done in particular:
 ## Example
 *levels/level1.txt*
 ```
-8x7
+10x7
 #######
 #     #
 # ### #
 #     #
+# # # #
+# ### #
        
 # ### #
 #  +  #
