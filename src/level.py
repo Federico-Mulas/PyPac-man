@@ -4,9 +4,18 @@ import logging
 import moving
 logging.basicConfig(level=logging.WARNING) #filename='example.log'
 
-WALL_CHAR  = '#'
-BLANK_CHAR = ' '
-SPAWN_CHAR = '+'
+import enum
+
+class MapObjects(enum.Enum):
+    WALL = "#"
+    EMPTY = " "
+    PLAYER_SPAWN = "+"
+    GHOST_SPAWN = "*"
+    GNAMMY_STUFF = "?" 
+
+# WALL_CHAR  = '#'
+# BLANK_CHAR = ' '
+# SPAWN_CHAR = '+'
 
 def add_wall(x, y):
     base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
@@ -45,19 +54,20 @@ class LevelError(Exception):
 
 def create_from_file(file_name, player):
     base.walls = []
-    
+
     try:
-        source = pyglet.resource.file(file_name)
+        source = pyglet.resource.file(file_name, "r")
+        #get header
         line = source.readline()
+
         if line == "":
             raise LevelError("empty file", file_name)
 
-        rc = line.rstrip().split("x")
+        rc = line.strip().split("x")
         if len(rc) != 2:
             raise LevelError("malformed first line " + line, file_name)
 
-        n_rows = int(rc[0])
-        n_cols = int(rc[1])
+        n_rows, n_cols = [int(x) for x in rc]
 
         #calculating step to obtain nicely placed square walls
         step = min(base.window.height // n_rows, base.window.width // n_cols)
@@ -73,27 +83,47 @@ def create_from_file(file_name, player):
         origin_x = step / 2
         origin_y = base.window.height - step / 2
 
-        line = source.readline()
-        r = 0
-        while line != "" and n_rows > r:
-            c = 0
-            for elem in line:
-                if   WALL_CHAR  == elem:
-                    add_wall(x = origin_x + step * c , y = origin_y - step * r)
-                elif BLANK_CHAR == elem:
-                    pass #nothing to do
-                elif SPAWN_CHAR == elem:
+        for r, line in enumerate(source):
+            line = line.strip()
+
+            if len(line) != n_cols:
+                pass #che fare?
+
+            for c, elem in enumerate(line):
+                if c == n_rows:
+                    pass #wtf
+
+                if elem == MapObjects.WALL.value:
+                    add_wall(x = origin_x + step * c, y = origin_y - step * r)
+                elif elem == MapObjects.PLAYER_SPAWN.value:
                     player.x = origin_x + step * c
                     player.y = origin_y - step * r
                     player.update()
+                elif elem == MapObjects.EMPTY.value:
+                    pass
                 else:
-                    raise LevelError("unknown char : '" + elem + "'", file_name)
-                c += 1
-                if c == n_cols:
-                    break
-            r += 1
-            line = source.readline()
+                    raise LevelError("Unknown char: '{}'".format(elem), file_name)
+
+        # line = source.readline()
+        # r = 0
+        # while line != "" and n_rows > r:
+        #     c = 0
+        #     for elem in line:
+        #         if   WALL_CHAR  == elem:
+        #             add_wall(x = origin_x + step * c , y = origin_y - step * r)
+        #         elif BLANK_CHAR == elem:
+        #             pass #nothing to do
+        #         elif SPAWN_CHAR == elem:
+        #             player.x = origin_x + step * c
+        #             player.y = origin_y - step * r
+        #             player.update()
+        #         else:
+        #             raise LevelError("unknown char : '" + elem + "'", file_name)
+        #         c += 1
+        #         if c == n_cols:
+        #             break
+        #     r += 1
+        #     line = source.readline()
 
     except LevelError as e:
         logging.error(e.default_message())
-
