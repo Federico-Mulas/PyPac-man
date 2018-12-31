@@ -12,6 +12,18 @@ class MapObjects(enum.Enum):
     PLAYER_SPAWN = "+"
     GHOST_SPAWN = "*"
     GNAMMY_STUFF = "?"
+    PLAYER = "bah" #
+    GHOST = "boh"
+
+
+class PacmanWorld(object):
+    def __init__(self, nrows, ncols):
+        #create empty nrows x ncols matrix
+        self.world = [[MapObjects.EMPTY] * ncols for _ in range(nrows)]
+
+    def set_element(self, element_type, x, y, obj = None):
+        self.world[x][y] = element_type
+
 
 # WALL_CHAR  = '#'
 # BLANK_CHAR = ' '
@@ -55,7 +67,9 @@ class LevelError(Exception):
         return "message:" + self.message + " for '" + self.file_name + "'"
 
 
+
 def create_from_file(file_name, player):
+    world = None
     base.walls = []
 
     try:
@@ -71,6 +85,7 @@ def create_from_file(file_name, player):
             raise LevelError("malformed first line " + line, file_name)
 
         n_rows, n_cols = [int(x) for x in rc]
+        world = PacmanWorld(n_rows, n_cols)
 
         #calculating step to obtain nicely placed square walls
         step = min(base.window.height // n_rows, base.window.width // n_cols)
@@ -97,19 +112,24 @@ def create_from_file(file_name, player):
                     pass #wtf
 
                 if elem == MapObjects.WALL.value:
+                    world.set_element(MapObjects.WALL, r, c)
                     add_wall(x = origin_x + step * c, y = origin_y - step * r)
                 elif elem == MapObjects.PLAYER_SPAWN.value:
                     player.x = origin_x + step * c
                     player.y = origin_y - step * r
                     player.update()
+                    world.set_element(MapObjects.PLAYER, r, c, player)
                 elif elem == MapObjects.GHOST_SPAWN.value:
                     ghost = moving.Ghost()
                     ghost.x = origin_x + step * c
                     ghost.y = origin_y - step * r
+                    world.set_element(MapObjects.GHOST, r, c, ghost)
                 elif elem == MapObjects.EMPTY.value:
-                    pass
+                    world.set_element(MapObjects.EMPTY, r, c)
                 else:
                     raise LevelError("Unknown char: '{}'".format(elem), file_name)
 
     except LevelError as e:
         logging.error(e.default_message())
+
+    return world

@@ -50,9 +50,9 @@ class MovingObject(pyglet.sprite.Sprite):
             x_move, y_move, self.rotation = move.value
 
             if x_move:
-                self.x += x_move * self.velocity * dt
+                self.x += int(x_move * self.velocity * dt)
             elif y_move:
-                self.y += y_move * self.velocity * dt
+                self.y += int(y_move * self.velocity * dt)
 
         for wall in base.walls:
             if self.collision(wall):
@@ -62,10 +62,10 @@ class MovingObject(pyglet.sprite.Sprite):
         self.check_bounds()
 
     def check_bounds(self):
-        min_x = -self.image.width / 2
-        min_y = -self.image.height / 2
-        max_x = base.window.width + self.image.width / 2
-        max_y = base.window.height + self.image.height / 2
+        min_x = -self.image.width // 2
+        min_y = -self.image.height // 2
+        max_x = base.window.width + self.image.width // 2
+        max_y = base.window.height + self.image.height // 2
         if self.x < min_x:
             self.x = max_x
         elif self.x > max_x:
@@ -83,14 +83,16 @@ class Player(MovingObject):
     def update(self, dt = 0):
         movement = Direction.get_direction(self)
         super().update(movement, dt)
+#        print(self.x)
 
 class Ghost(MovingObject):
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.ghost.img, *args, **kwargs)
 
     def update(self, dt = 0):
-        #attenta pianificazione
-        super().update(Direction.LEFT, dt)
+        direction = Direction.LEFT
+        #TODO: attenta pianificazione
+        super().update(direction, dt)
 
 
 def update(dt):
