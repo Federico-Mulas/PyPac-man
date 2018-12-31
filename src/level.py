@@ -47,7 +47,7 @@ def create_from_file(file_name, player):
     base.walls = []
     
     try:
-        source = pyglet.resource.file(file_name)
+        source = pyglet.resource.file(file_name, 'r')
         line = source.readline()
         if line == "":
             raise LevelError("empty file", file_name)
