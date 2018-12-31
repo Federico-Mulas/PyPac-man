@@ -11,7 +11,7 @@ class MapObjects(enum.Enum):
     EMPTY = " "
     PLAYER_SPAWN = "+"
     GHOST_SPAWN = "*"
-    GNAMMY_STUFF = "?" 
+    GNAMMY_STUFF = "?"
 
 # WALL_CHAR  = '#'
 # BLANK_CHAR = ' '
@@ -19,6 +19,9 @@ class MapObjects(enum.Enum):
 
 def add_wall(x, y):
     base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
+
+def add_ghost(ghost):
+    base.ghosts.append(pyglet.sprite.Sprite(img=base.ghost.img, x=ghost.x, y=ghost.y, batch=moving.MovingObject.batch))
 
 def create_borders():
     """ Create walls i all 4 borders """
@@ -99,31 +102,14 @@ def create_from_file(file_name, player):
                     player.x = origin_x + step * c
                     player.y = origin_y - step * r
                     player.update()
+                elif elem == MapObjects.GHOST_SPAWN.value:
+                    ghost = moving.Ghost()
+                    ghost.x = origin_x + step * c
+                    ghost.y = origin_y - step * r
                 elif elem == MapObjects.EMPTY.value:
                     pass
                 else:
                     raise LevelError("Unknown char: '{}'".format(elem), file_name)
-
-        # line = source.readline()
-        # r = 0
-        # while line != "" and n_rows > r:
-        #     c = 0
-        #     for elem in line:
-        #         if   WALL_CHAR  == elem:
-        #             add_wall(x = origin_x + step * c , y = origin_y - step * r)
-        #         elif BLANK_CHAR == elem:
-        #             pass #nothing to do
-        #         elif SPAWN_CHAR == elem:
-        #             player.x = origin_x + step * c
-        #             player.y = origin_y - step * r
-        #             player.update()
-        #         else:
-        #             raise LevelError("unknown char : '" + elem + "'", file_name)
-        #         c += 1
-        #         if c == n_cols:
-        #             break
-        #     r += 1
-        #     line = source.readline()
 
     except LevelError as e:
         logging.error(e.default_message())

@@ -76,7 +76,6 @@ class MovingObject(pyglet.sprite.Sprite):
             self.y = min_y
 
 class Player(MovingObject):
-
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.pacman.img, *args, **kwargs)
         self.key_handler = key_h.KeyStateHandler()
@@ -84,6 +83,15 @@ class Player(MovingObject):
     def update(self, dt = 0):
         movement = Direction.get_direction(self)
         super().update(movement, dt)
+
+class Ghost(MovingObject):
+    def __init__(self, *args, **kwargs):
+        MovingObject.__init__(self, img=base.ghost.img, *args, **kwargs)
+
+    def update(self, dt = 0):
+        #attenta pianificazione
+        super().update(Direction.LEFT, dt)
+
 
 def update(dt):
     """ very simply but important function that update the status of all moving objects """

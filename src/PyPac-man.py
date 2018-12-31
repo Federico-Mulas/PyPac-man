@@ -5,9 +5,11 @@ import level
 import moving
 
 
+
 #create pacman and handle user input
 pacman = moving.Player()
 base.window.push_handlers(pacman.key_handler)
+
 
 @base.window.event
 def on_draw():

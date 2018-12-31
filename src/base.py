@@ -13,6 +13,10 @@ class pacman:
     spawn_x = window.width / 2
     spawn_y = window.height / 2
 
+class ghost:
+    img = pyglet.resource.image("ghost.png")
+
+
 def set_obj_dimension(dim):
     """ this function set all dimension of objects of the game
 
@@ -32,9 +36,15 @@ def set_obj_dimension(dim):
     pacman.img.anchor_x = pacman.img.height / 2
     pacman.img.anchor_y = pacman.img.height / 2
 
+    ghost.img.height = dim - dim/5
+    ghost.img.width = ghost.img.height
+    ghost.img.anchor_x = ghost.img.height / 2
+    ghost.img.anchor_y = ghost.img.height / 2
+
 #setting default dimension
 set_obj_dimension(40)
 
 field_batch = pyglet.graphics.Batch()
+ghost_batch = pyglet.graphics.Batch()
 
 walls = []
