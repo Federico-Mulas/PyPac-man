@@ -23,6 +23,17 @@ class Direction(enum.Enum):
         if sprite.key_handler[key_h.RIGHT]:
             return cls.RIGHT
 
+    @classmethod
+    def invert_direction(cls, current_direction):
+        if current_direction == cls.LEFT:
+            return cls.RIGHT
+        if current_direction == cls.RIGHT:
+            return cls.LEFT
+        if current_direction == cls.UP:
+            return cls.DOWN
+        if current_direction == cls.DOWN:
+            return cls.UP
+
 class MovingObject(pyglet.sprite.Sprite):
     batch = pyglet.graphics.Batch()
     collection = []
@@ -94,10 +105,10 @@ class Player(MovingObject):
 class Ghost(MovingObject):
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.ghost.img, *args, **kwargs)
-        self.__direction = Direction.LEFT
+        self.direction = Direction.LEFT
 
     def update(self, dt = 0):
-        super().update(self.__direction, dt)
+        super().update(self.direction, dt)
 
 
 # def update(dt):

@@ -2,7 +2,7 @@ import enum
 import pyglet
 import logging
 import base
-from moving import MovingObject, Player, Ghost
+from moving import MovingObject, Player, Ghost, Direction
 
 class MapObjects(enum.Enum):
     WALL = "#"
@@ -24,13 +24,27 @@ class PacmanWorld(object):
             self.entity = moving_obj
             self.x = 0
             self.y = 0
+            self.direction = Direction.LEFT
 
             self.update_coords()
 
         def update_coords(self):
-            """ Return object coordinates in the world matrix.  """
-            self.x = round((self.__settings.origin_y - self.entity.y) / self.__settings.step)
-            self.y = round((self.entity.x - self.__settings.origin_x) / self.__settings.step)
+            """ Update object coordinates in the world matrix and return previous coordinates. """
+            x = ((self.__settings.origin_y - self.entity.y) / self.__settings.step)
+            y = ((self.entity.x - self.__settings.origin_x) / self.__settings.step)
+            rounded_x, rounded_y = round(x), round(y)
+
+            prevs = self.x, self.y
+
+            if abs(x - rounded_x) == 0:
+                self.x = rounded_x
+            if abs(y - rounded_y) == 0:
+                self.y = rounded_y
+
+            return prevs
+
+#            if isinstance(self.entity, Player):
+#                print(self.x, self.y)
 
 
     def __init__(self):
@@ -43,7 +57,6 @@ class PacmanWorld(object):
 
     def _add_wall(x, y):
         base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
-
 
 
     def __init(self, nrows, ncols):
@@ -63,9 +76,23 @@ class PacmanWorld(object):
 #        print("Pacman in ({},{})".format(self.pacman.x, self.pacman.y))
 
         for ghost in self.ghosts:
+            #update ghost in gui
             ghost.entity.update(dt)
-            ghost.update_coords()
-#            print("Ghost in ({}, {})".format(ghost.x, ghost.y))
+            #update ghost's coordinates
+            prev_x, prev_y = ghost.update_coords()
+
+            if prev_x != ghost.x or prev_y != ghost.y:
+                #update ghost position in the matrix
+                self.set_element(MapObjects.GHOST, ghost.x, ghost.y)
+                self.set_element(MapObjects.EMPTY, prev_x, prev_y)
+
+            #get current direction
+            x, y, _ = ghost.direction.value
+
+            if self.world[ghost.x+y][ghost.y+x] == MapObjects.WALL:
+                #invert movement direction if there is a wall in front of him
+                ghost.entity.direction = Direction.invert_direction(ghost.entity.direction)
+                ghost.direction = ghost.entity.direction
 
 
 
@@ -85,7 +112,10 @@ class PacmanWorld(object):
             if len(line) == 0:
                 raise LevelError("Empty file", filename)
 
-            n_rows, n_cols = [int(x) for x in line.split("x")]
+            try:
+                n_rows, n_cols = [int(x) for x in line.split("x")]
+            except ValueError:
+                raise LevelError("malformed first line {}".format(line), filename)
 
             #calculating step to obtain nicely placed square walls
             world.__settings.step = min(base.window.height // n_rows, base.window.width // n_cols)
@@ -109,21 +139,25 @@ class PacmanWorld(object):
                 line = line.strip()
 
                 if len(line) != n_cols:
-                    pass    #TODO
+                    logging.warning("line {} has length {} (expected {})".format(r+1, len(line), n_cols))
 
                 for c, elem in enumerate(line):
+#                    print("Init {},{},{}".format(r,c, elem))
                     if c == n_rows:
-                        pass #TODO
+                        logging.warning("ignoring in excess characters in line {}".format(r))
+                        break
 
                     #get GUI coordinates for current object
                     x_coord = world.__settings.origin_x + world.__settings.step * c
                     y_coord = world.__settings.origin_y - world.__settings.step * r
 
                     if elem == MapObjects.WALL.value:
+                        #add a wall
                         world.set_element(MapObjects.WALL, r, c)
                         PacmanWorld._add_wall(x_coord, y_coord)
 
                     elif elem == MapObjects.PLAYER_SPAWN.value:
+                        #instantiate pacman in the current position
                         pacman = Player()
                         pacman.x, pacman.y = x_coord, y_coord
 
@@ -133,6 +167,7 @@ class PacmanWorld(object):
                         print("PLAYER SPAWN in {}, {}".format(x_coord, y_coord), flush=True)
 
                     elif elem == MapObjects.GHOST_SPAWN.value:
+                        #instantiate a ghost in the current position
                         ghost = Ghost()
                         ghost.x, ghost.y = x_coord, y_coord
 
@@ -146,11 +181,9 @@ class PacmanWorld(object):
                     else:
                         raise LevelError("Unknown symbol: '{}'".format(elem), filename)
 
-        except ValueError as e:
-            #failed to split first line of the file
-            logging.error(e)
         except LevelError as e:
             logging.error(e.default_message())
+
 
         return world
 
@@ -166,7 +199,7 @@ class PacmanWorld(object):
         lower_border = base.wall.img.anchor_y
         right_border = base.window.width - base.wall.img.anchor_x
         upper_border = base.window.height - base.wall.img.anchor_y
-        
+
         for i in range(0, n_blocks_y):
             y = i * base.wall.img.height + base.wall.img.anchor_y
             PacmanWorld._add_wall(x=left_border, y=y)
@@ -178,8 +211,8 @@ class PacmanWorld(object):
             PacmanWorld._add_wall(x=x, y=upper_border)
             PacmanWorld._add_wall(x=x, y=lower_border)
 
-    def set_element(self, element_type, x, y, obj = None):
-        self.world[x][y] = element_type
+    def set_element(self, element_type, row, col):
+        self.world[row][col] = element_type
 
 
 class LevelError(Exception):
