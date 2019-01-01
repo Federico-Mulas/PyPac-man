@@ -94,11 +94,10 @@ class Player(MovingObject):
 class Ghost(MovingObject):
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.ghost.img, *args, **kwargs)
+        self.__direction = Direction.LEFT
 
     def update(self, dt = 0):
-        direction = Direction.LEFT
-        #TODO: attenta pianificazione
-        super().update(direction, dt)
+        super().update(self.__direction, dt)
 
 
 # def update(dt):

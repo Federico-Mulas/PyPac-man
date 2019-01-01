@@ -10,8 +10,8 @@ class MapObjects(enum.Enum):
     PLAYER_SPAWN = "+"
     GHOST_SPAWN = "*"
     GNAMMY_STUFF = "?"
-    PLAYER = "bah" #
-    GHOST = "boh"
+    PLAYER = ":v" #
+    GHOST = "A"
 
 
 class PacmanWorld(object):
@@ -59,6 +59,7 @@ class PacmanWorld(object):
         """ very simply but important function that update the status of all moving objects """
         self.pacman.entity.update(dt)
         self.pacman.update_coords()
+
 #        print("Pacman in ({},{})".format(self.pacman.x, self.pacman.y))
 
         for ghost in self.ghosts:
@@ -72,6 +73,8 @@ class PacmanWorld(object):
     def parse_map_file(filename):
         """ Read a file containing a level map and instantiate a PacmanWorld object
         that represent the position and the status of each sprite. """
+
+        logging.basicConfig(level=logging.WARNING)
 
         world = PacmanWorld()
 
@@ -163,6 +166,7 @@ class PacmanWorld(object):
         lower_border = base.wall.img.anchor_y
         right_border = base.window.width - base.wall.img.anchor_x
         upper_border = base.window.height - base.wall.img.anchor_y
+        
         for i in range(0, n_blocks_y):
             y = i * base.wall.img.height + base.wall.img.anchor_y
             add_wall(x=left_border, y=y)
