@@ -41,7 +41,7 @@ class PacmanWorld(object):
 
         self.__settings = base.Settings()
 
-    def __add_wall(x, y):
+    def _add_wall(x, y):
         base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
 
 
@@ -118,7 +118,7 @@ class PacmanWorld(object):
 
                     if elem == MapObjects.WALL.value:
                         world.set_element(MapObjects.WALL, r, c)
-                        PacmanWorld.__add_wall(x_coord, y_coord)
+                        PacmanWorld._add_wall(x_coord, y_coord)
 
                     elif elem == MapObjects.PLAYER_SPAWN.value:
                         pacman = Player()
@@ -165,14 +165,14 @@ class PacmanWorld(object):
         upper_border = base.window.height - base.wall.img.anchor_y
         for i in range(0, n_blocks_y):
             y = i * base.wall.img.height + base.wall.img.anchor_y
-            add_wall(x=left_border, y=y)
-            add_wall(x=right_border, y=y)
+            PacmanWorld._add_wall(x=left_border, y=y)
+            PacmanWorld._add_wall(x=right_border, y=y)
 
 
         for i in range(0, n_blocks_x):
             x = i * base.wall.img.width + base.wall.img.anchor_x
-            add_wall(x=x, y=upper_border)
-            add_wall(x=x, y=lower_border)
+            PacmanWorld._add_wall(x=x, y=upper_border)
+            PacmanWorld._add_wall(x=x, y=lower_border)
 
     def set_element(self, element_type, x, y, obj = None):
         self.world[x][y] = element_type
