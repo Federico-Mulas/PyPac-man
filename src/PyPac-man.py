@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 import pyglet
 import base
-import level
 import moving
 
 from world import PacmanWorld
