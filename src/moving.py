@@ -30,6 +30,7 @@ class MovingObject(pyglet.sprite.Sprite):
     def __init__(self, *args, **kwargs):
         pyglet.sprite.Sprite.__init__(self, batch=MovingObject.batch, *args, **kwargs)
         self.velocity = self.image.width * 7/3
+        self.world = None 
         MovingObject.collection.append(self)
 
     def collision(self, obj):
