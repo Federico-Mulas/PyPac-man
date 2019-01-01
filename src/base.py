@@ -1,7 +1,10 @@
 import pyglet
+import logging
 
 pyglet.resource.path = ['../resources', '../levels']
 pyglet.resource.reindex()
+
+logging.basicConfig(level=logging.WARNING) #filename='example.log'
 
 window = pyglet.window.Window()
 #walls inside the game
