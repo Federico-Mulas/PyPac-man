@@ -6,10 +6,10 @@ import enum
 
 class Direction(enum.Enum):
     """Direction enum represents the possible movements that pacman and ghosts can performself."""
-    UP = (None, 1, 270)     # (x movement, y movement, rotation)
-    DOWN = (None, -1, 90)
-    LEFT = (-1, None, 180)
-    RIGHT = (1, None, 0)
+    UP = (0, 1, 270)     # (x movement, y movement, rotation)
+    DOWN = (0, -1, 90)
+    LEFT = (-1, 0, 180)
+    RIGHT = (1, 0, 0)
 
     @classmethod
     def get_direction(cls, sprite):
@@ -29,9 +29,12 @@ class MovingObject(pyglet.sprite.Sprite):
 
     def __init__(self, *args, **kwargs):
         pyglet.sprite.Sprite.__init__(self, batch=MovingObject.batch, *args, **kwargs)
-        self.velocity = self.image.width * 7/3
-        self.world = None 
         MovingObject.collection.append(self)
+
+        self.velocity = self.image.width * 7/3
+        self.last_move = None
+
+
 
     def collision(self, obj):
         min_x_dist = (self.width + obj.width) / 2
@@ -46,18 +49,19 @@ class MovingObject(pyglet.sprite.Sprite):
             return
 
         old_coords = self.x, self.y
+        last_move = self.last_move
 
         if move:
-            x_move, y_move, self.rotation = move.value
+            x_direction, y_direction, self.rotation = move.value
 
-            if x_move:
-                self.x += int(x_move * self.velocity * dt)
-            elif y_move:
-                self.y += int(y_move * self.velocity * dt)
+            self.x += int(x_direction * self.velocity * dt)
+            self.y += int(y_direction * self.velocity * dt)
+            self.last_move = move
 
         for wall in base.walls:
             if self.collision(wall):
                 self.x, self.y = old_coords
+                self.last_move = last_move
                 break
 
         self.check_bounds()
@@ -84,7 +88,8 @@ class Player(MovingObject):
     def update(self, dt = 0):
         movement = Direction.get_direction(self)
         super().update(movement, dt)
-#        print(self.x)
+
+
 
 class Ghost(MovingObject):
     def __init__(self, *args, **kwargs):
@@ -96,7 +101,7 @@ class Ghost(MovingObject):
         super().update(direction, dt)
 
 
-def update(dt):
-    """ very simply but important function that update the status of all moving objects """
-    for obj in MovingObject.collection:
-        obj.update(dt)
+# def update(dt):
+#     """ very simply but important function that update the status of all moving objects """
+#     for obj in MovingObject.collection:
+#         obj.update(dt)

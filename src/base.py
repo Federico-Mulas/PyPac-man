@@ -17,6 +17,12 @@ class ghost:
     img = pyglet.resource.image("ghost.png")
 
 
+class Settings(object):
+    origin_x = 0
+    origin_y = 0
+    step = 0
+
+
 def set_obj_dimension(dim):
     """ this function set all dimension of objects of the game
 
@@ -45,6 +51,5 @@ def set_obj_dimension(dim):
 set_obj_dimension(40)
 
 field_batch = pyglet.graphics.Batch()
-ghost_batch = pyglet.graphics.Batch()
 
 walls = []
