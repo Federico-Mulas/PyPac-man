@@ -1,10 +1,8 @@
 import enum
 import pyglet
-
+import logging
 import base
-import level
 from moving import MovingObject, Player, Ghost
-
 
 class MapObjects(enum.Enum):
     WALL = "#"
@@ -42,6 +40,9 @@ class PacmanWorld(object):
         self.__ghosts = None
 
         self.__settings = base.Settings()
+
+    def _add_wall(x, y):
+        base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
 
 
 
@@ -117,7 +118,7 @@ class PacmanWorld(object):
 
                     if elem == MapObjects.WALL.value:
                         world.set_element(MapObjects.WALL, r, c)
-                        level.add_wall(x_coord, y_coord)
+                        PacmanWorld._add_wall(x_coord, y_coord)
 
                     elif elem == MapObjects.PLAYER_SPAWN.value:
                         pacman = Player()
@@ -140,7 +141,7 @@ class PacmanWorld(object):
                     elif elem == MapObjects.EMPTY.value:
                         world.set_element(MapObjects.EMPTY, r, c)
                     else:
-                        raise LevelError("Unknown symbol: '{}'".format(elem), file_name)
+                        raise LevelError("Unknown symbol: '{}'".format(elem), filename)
 
         except ValueError as e:
             #failed to split first line of the file
@@ -149,6 +150,29 @@ class PacmanWorld(object):
             logging.error(e.default_message())
 
         return world
+
+    @staticmethod
+    def create_borders():
+        """ Create a map with walls at all 4 borders (a square)"""
+        base.walls = []
+
+        n_blocks_y = base.window.height // base.wall.img.height
+        n_blocks_x = base.window.width // base.wall.img.width
+
+        left_border = base.wall.img.anchor_x
+        lower_border = base.wall.img.anchor_y
+        right_border = base.window.width - base.wall.img.anchor_x
+        upper_border = base.window.height - base.wall.img.anchor_y
+        for i in range(0, n_blocks_y):
+            y = i * base.wall.img.height + base.wall.img.anchor_y
+            PacmanWorld._add_wall(x=left_border, y=y)
+            PacmanWorld._add_wall(x=right_border, y=y)
+
+
+        for i in range(0, n_blocks_x):
+            x = i * base.wall.img.width + base.wall.img.anchor_x
+            PacmanWorld._add_wall(x=x, y=upper_border)
+            PacmanWorld._add_wall(x=x, y=lower_border)
 
     def set_element(self, element_type, x, y, obj = None):
         self.world[x][y] = element_type
