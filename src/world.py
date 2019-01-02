@@ -10,7 +10,7 @@ class MapObjects(enum.Enum):
     PLAYER_SPAWN = "+"
     GHOST_SPAWN = "*"
     GNAMMY_STUFF = "?"
-    PLAYER = ":v" #
+    PLAYER = ":v"
     GHOST = "A"
 
 
@@ -22,32 +22,30 @@ class PacmanWorld(object):
         def __init__(self, moving_obj, settings):
             self.__settings = settings
             self.entity = moving_obj
-            self.x = 0
-            self.y = 0
+            self.row = 0
+            self.col = 0
             self.direction = Direction.LEFT
 
             self.update_coords()
 
         def update_coords(self):
             """ Update object coordinates in the world matrix and return previous coordinates. """
-            x = ((self.__settings.origin_y - self.entity.y) / self.__settings.step)
-            y = ((self.entity.x - self.__settings.origin_x) / self.__settings.step)
-            rounded_x, rounded_y = round(x), round(y)
+            row = ((self.__settings.origin_y - self.entity.y) / self.__settings.step)
+            col = ((self.entity.x - self.__settings.origin_x) / self.__settings.step)
+            rounded_row, rounded_col = round(row), round(col)
 
-            prevs = self.x, self.y
+            prevs = self.row, self.col
 
-            if abs(x - rounded_x) == 0:
-                self.x = rounded_x
-            if abs(y - rounded_y) == 0:
-                self.y = rounded_y
+            if abs(row - rounded_row) == 0:
+                self.row = rounded_row
+            if abs(col - rounded_col) == 0:
+                self.col = rounded_col
 
             return prevs
 
-#            if isinstance(self.entity, Player):
-#                print(self.x, self.y)
-
 
     def __init__(self):
+        """Initialize an empty world"""
         self.__map_size = None
         self.world = None
         self.__pacman = None
@@ -60,36 +58,42 @@ class PacmanWorld(object):
 
 
     def __init(self, nrows, ncols):
+        """Initialize a nrows*ncols world"""
         self.__map_size = (nrows, ncols)
         #create empty nrows x ncols matrix
         self.world = [[MapObjects.EMPTY] * ncols for _ in range(nrows)]
         self.pacman = None
         self.ghosts = list()
 
+    def update_coords(self, character, dt):
+        """Update character's coordinates both in gui and in the matrix.
+        Return True if the character moved, False otherwise. """
+        entity_type = MapObjects.PLAYER if isinstance(character.entity, Player) else MapObjects.GHOST
+        #update position in gui
+        character.entity.update(dt)
 
+        #update matrix coordinates
+        prev_row, prev_col = character.update_coords()
+        #update matrix elements
+        if prev_row != character.row or prev_col != character.col:
+            self.set_element(MapObjects.EMPTY, prev_row, prev_col)
+            self.set_element(entity_type, character.row, character.col)
+            return True
+
+        return False
 
     def update(self, dt):
-        """ very simply but important function that update the status of all moving objects """
-        self.pacman.entity.update(dt)
-        self.pacman.update_coords()
-
-#        print("Pacman in ({},{})".format(self.pacman.x, self.pacman.y))
+        """ Update the status of all moving objects """
+        self.update_coords(self.pacman, dt)
 
         for ghost in self.ghosts:
-            #update ghost in gui
-            ghost.entity.update(dt)
-            #update ghost's coordinates
-            prev_x, prev_y = ghost.update_coords()
+            self.update_coords(ghost, dt)
 
-            if prev_x != ghost.x or prev_y != ghost.y:
-                #update ghost position in the matrix
-                self.set_element(MapObjects.GHOST, ghost.x, ghost.y)
-                self.set_element(MapObjects.EMPTY, prev_x, prev_y)
+            #get info about current direction
+            c_direction, r_direction, _ = ghost.direction.value
 
-            #get current direction
-            x, y, _ = ghost.direction.value
-
-            if self.world[ghost.x+y][ghost.y+x] == MapObjects.WALL:
+            if self.world[ghost.row+r_direction][ghost.col+c_direction] == MapObjects.WALL:
+                print("muro")
                 #invert movement direction if there is a wall in front of him
                 ghost.entity.direction = Direction.invert_direction(ghost.entity.direction)
                 ghost.direction = ghost.entity.direction
