@@ -2,6 +2,7 @@ import enum
 import pyglet
 import logging
 import base
+import random
 from moving import MovingObject, Player, Ghost, Direction
 
 class MapObjects(enum.Enum):
@@ -17,50 +18,103 @@ class MapObjects(enum.Enum):
 class PacmanWorld(object):
     """ Representation of the map where pacman and the ghosts live. Needed to planning purposes. """
 
+    class WorldCell(object):
+        """ Representation of a cell matrix. Multiple objects can live simultaneously in the same cell """
+
+        def __init__(self, row, col, content=MapObjects.EMPTY):
+            #cell coordinates (a little bit redundant, but maybe can be useful)
+            self.__coords = (row, col)
+            #what objects are present in the cell
+            self.__content = [content]
+            #which entities are present in the cell
+            self.__entity = list()
+
+        @property
+        def row(self):
+            return self.__coords[0]
+
+        @property
+        def col(self):
+            return self.__coords[1]
+
+        def add(self, entity):
+            """Add an entity in the cell"""
+        #    print("Adding {} to {},{}".format(entity.type, self.row, self.col))
+            self.__content.append(entity.type)
+            self.__entity.append(entity)
+
+        def remove(self, entity):
+            """Remove the given entity from the cell"""
+
+        #    print("Trying to remove {} from {},{}".format(entity.type, self.row, self.col))
+            if entity in self.__entity: #because life sucks
+                self.__content.remove(entity.type)
+                self.__entity.remove(entity)
+
+        def __contains__(self, item):
+            """Check the presence of a certain item (a MapObjects instance) in the cell"""
+            return item in self.__content
+
+        def __repr__(self):
+            return "".join([v.value for v in self.__content])
+
     class PacmanEntity(object):
         """ """
         def __init__(self, moving_obj, settings):
             self.__settings = settings
-            self.entity = moving_obj
-            self.row = 0
-            self.col = 0
+            #entity's coordinates in the matrix
+            self.__row = None
+            self.__col = None
+            #movement direction
             self.direction = Direction.LEFT
+            #Player or Ghost object
+            self.entity = moving_obj
+            self.type = MapObjects.PLAYER if isinstance(moving_obj, Player) else MapObjects.GHOST
 
             self.update_coords()
 
+        @property
+        def row(self):
+            return self.__row
+
+        @property
+        def col(self):
+            return self.__col
+
         def update_coords(self):
-            """ Update object coordinates in the world matrix and return previous coordinates. """
+#            """ Update object coordinates (locally in the object) and return previous coordinates. """
+            #calculate matrix cell based on GUI coordinates
             row = ((self.__settings.origin_y - self.entity.y) / self.__settings.step)
             col = ((self.entity.x - self.__settings.origin_x) / self.__settings.step)
             rounded_row, rounded_col = round(row), round(col)
-
-            prevs = self.row, self.col
+            #store current coordinates
+            prevs = self.__row, self.__col
 
             if False:
+                #it seems that this solution does not work properly :(
                 if abs(row - rounded_row) == 0 or abs(col - rounded_col) == 0:
-                    self.row = rounded_row
-                    self.col = rounded_col
+                    self.__row = rounded_row
+                    self.__col = rounded_col
 
+            #update coordinates, if they are changed
             if abs(row - rounded_row) == 0:
-                self.row = rounded_row
+                self.__row = rounded_row
             if abs(col - rounded_col) == 0:
-                self.col = rounded_col
+                self.__col = rounded_col
 
             return prevs
 
 
         def available_directions(self, worldmap):
-            available = filter(
-                lambda d: worldmap[self.row+d.row][self.col+d.col] != MapObjects.WALL,
-                Direction)
+            available = [
+                current
+                for current in Direction
+                if MapObjects.WALL not in worldmap[self.row+current.row, self.col+current.col]
+            ]
 
-            pene = list(available)
-            if False:
-                print("Ghost in {},{} -> {}".format(self.col, self.row, pene))
-                for row in worldmap:
-                    print([elem.value for elem in row])
+            logging.info("Position during planning: {},{}: found: {}".format(self.row, self.col, available))
 
-            return pene
+            return available
 
 
 
@@ -73,22 +127,38 @@ class PacmanWorld(object):
         self.__ghosts = None
 
         self.__settings = base.Settings()
-        self.__flag = False
 
 
     def __init(self, nrows, ncols):
         """Initialize a nrows*ncols world"""
         self.__map_size = (nrows, ncols)
         #create empty nrows x ncols matrix
-        self.world = [[MapObjects.EMPTY] * ncols for _ in range(nrows)]
+        self.world = [
+            [PacmanWorld.WorldCell(nr, nc) for nc in range(ncols)]
+            for nr in range(nrows)
+        ]
+
         self.pacman = None
         self.ghosts = list()
+
+    def __getitem__(self, key):
+        """Get the element in the [row, col] cell"""
+        row, col = key
+        return self.world[row][col]
+
+    def __setitem__(self, key, item):
+        """Set the content of the [row,col] cell"""
+        row, col = key
+        self.world[row][col].add(item)
+
+    def set_element(self, element_type, row, col):
+        """Set the content of the [row,col] cell. It supports ONLY fixed objects"""
+        self.world[row][col] = PacmanWorld.WorldCell(row, col, element_type)
 
     def update_coords(self, character, dt):
         """Update character's coordinates both in gui and in the matrix.
         Return True if the character has been moved, False otherwise. """
 
-        entity_type = MapObjects.PLAYER if isinstance(character.entity, Player) else MapObjects.GHOST
         #update position in gui
         character.entity.update(dt)
 
@@ -96,8 +166,12 @@ class PacmanWorld(object):
         prev_row, prev_col = character.update_coords()
         #update matrix elements
         if prev_row != character.row or prev_col != character.col:
-            self.set_element(MapObjects.EMPTY, prev_row, prev_col)
-            self.set_element(entity_type, character.row, character.col)
+            if isinstance(character.entity, Ghost):
+                print("Moving from {},{} to {},{}".format(prev_row, prev_col, character.row, character.col))
+
+            self[prev_row, prev_col].remove(character)
+            self[character.row, character.col].add(character)
+
             return True
 
         return False
@@ -105,57 +179,50 @@ class PacmanWorld(object):
     def update(self, dt):
         """ Update the status of all moving objects """
 
-        if self.update_coords(self.pacman, dt):
-            print("Pacman in {},{}".format(self.pacman.col, self.pacman.row))
-            pass#print(self.pacman.available_directions(self.world))
+        self.update_coords(self.pacman, dt)
 
         for ghost in self.ghosts:
             if self.update_coords(ghost, dt):
-                #get info about current direction
-                next_cell = self.world[ghost.row + ghost.direction.row][ghost.col + ghost.direction.col]
+                #get available directions
+                actions = ghost.available_directions(self)
+                #remove the inverse direction from the available ones (it is present for sure)
+                #it is the default one, if no other directions are available
+                chosen_direction = Direction.invert_direction(ghost.entity.direction)
+                actions.remove(chosen_direction)
 
-                if next_cell == MapObjects.WALL:
-                    #get available directions
-                    actions = ghost.available_directions(self.world)
+                #find best direction from available ones
+                if len(actions) > 0:
+                    def manhattan_distance(pacman, ghost, direction):
+                        return abs(pacman.row - ghost.row - direction.row) + abs(pacman.col - ghost.col - direction.col)
 
-                    #remove the inverse direction from the available ones (it is present for sure)
-                    #it is the default one, if no other directions are available
-                    chosen_direction = Direction.invert_direction(ghost.entity.direction)
-                    actions.remove(chosen_direction)
+                    #calculate actions' costs
+                    costs = [(action, manhattan_distance(self.pacman, ghost, action)) for action in actions]
+                    #get minimum cost
+                    min_cost = min(costs, key=lambda pair: pair[1])[1]
+                    #get random action with minimum cost
+                    best_action = random.choice([action for action, cost in costs if cost == min_cost])
 
-                    #find best direction from available ones
-                    if len(actions) > 0:
-                        def manhattan_distance(pacman, ghost, direction):
-                            return abs(pacman.row - ghost.row - direction.row) + abs(pacman.col - ghost.col - direction.col)
+                    #check if the best action is better than the default one
+                    if min_cost <= manhattan_distance(self.pacman, ghost, chosen_direction):
+                        chosen_direction = best_action
 
-                        costs = [(action, manhattan_distance(self.pacman, ghost, action)) for action in actions]
-                        best_action, min_cost = min(costs, key=lambda t: t[1])
-
-                        #check if the best action is better than the default one
-                        if min_cost <= manhattan_distance(self.pacman, ghost, chosen_direction):
-                            chosen_direction = best_action
-
-
-            #        print("in {},{} ({}). Going {}".format(ghost.col, ghost.row, actions, chosen_direction))
-                    ghost.direction = chosen_direction
-                    ghost.entity.direction = ghost.direction
+                logging.info("planning in {},{}. available: {}, decision: {}".format(ghost.row, ghost.col, actions, chosen_direction))
 
 
-#                    if len(actions) == 1:
-#                    ghost.entity.direction = actions[0]
-        #            print("murooo")
-                    #invert movement direction if there is a wall in front of him
-#                    ghost.entity.direction = Direction.invert_direction(ghost.entity.direction)
-#                    ghost.direction = ghost.entity.direction
+                ghost.direction = chosen_direction
+                ghost.entity.direction = ghost.direction
 
 
+
+    def __str__(self):
+        return str("\n".join([str(row) for row in self.world]))
 
     @staticmethod
     def parse_map_file(filename):
         """ Read a file containing a level map and instantiate a PacmanWorld object
         that represent the position and the status of each sprite. """
 
-        logging.basicConfig(level=logging.WARNING)
+        logging.getLogger().setLevel(logging.INFO)
 
         world = PacmanWorld()
 
@@ -176,16 +243,13 @@ class PacmanWorld(object):
 
             #resizing blocks and packman
             base.set_obj_dimension(world.__settings.step)
-
             #resizing window to fit
             base.window.height = world.__settings.step * n_rows
             base.window.width  = world.__settings.step * n_cols
-
-            # Using upper left border to as origin
+            # Using upper left border as origin
             world.__settings.origin_x = world.__settings.step / 2
             world.__settings.origin_y = base.window.height - world.__settings.step / 2
-
-            print(world.__settings.origin_x, world.__settings.origin_y, world.__settings.step)
+#            print(world.__settings.origin_x, world.__settings.origin_y, world.__settings.step)
 
             world.__init(n_rows, n_cols)
 
@@ -196,7 +260,6 @@ class PacmanWorld(object):
                     logging.warning("line {} has length {} (expected {})".format(r+1, len(line), n_cols))
 
                 for c, elem in enumerate(line):
-#                    print("Init {},{},{}".format(r,c, elem))
                     if c == n_rows:
                         logging.warning("ignoring in excess characters in line {}".format(r))
                         break
@@ -214,26 +277,26 @@ class PacmanWorld(object):
                         #instantiate pacman in the current position
                         pacman = Player()
                         pacman.x, pacman.y = x_coord, y_coord
-
-                        world.set_element(MapObjects.PLAYER, r, c)
+                        #set spawning point
+                        world.set_element(MapObjects.PLAYER_SPAWN, r, c)
                         world.pacman = PacmanWorld.PacmanEntity(pacman, world.__settings)
 
-                        print("PLAYER SPAWN in {}, {}".format(x_coord, y_coord), flush=True)
+                        logging.info("PLAYER SPAWN in {}, {}".format(x_coord, y_coord))
 
                     elif elem == MapObjects.GHOST_SPAWN.value:
                         #instantiate a ghost in the current position
                         ghost = Ghost()
                         ghost.x, ghost.y = x_coord, y_coord
 
-                        world.set_element(MapObjects.GHOST, r, c)
+                        world.set_element(MapObjects.GHOST_SPAWN, r, c)
+                        #set spawning point
                         world.ghosts.append(PacmanWorld.PacmanEntity(ghost, world.__settings))
 
-                        print("GHOST SPAWN in {}, {}".format(x_coord, y_coord), flush=True)
+                        logging.info("GHOST SPAWN in {}, {}".format(x_coord, y_coord))
 
-                    elif elem == MapObjects.EMPTY.value:
-                        world.set_element(MapObjects.EMPTY, r, c)
-                    else:
+                    elif elem != MapObjects.EMPTY.value:
                         raise LevelError("Unknown symbol: '{}'".format(elem), filename)
+
 
         except LevelError as e:
             logging.error(e.default_message())
@@ -264,8 +327,6 @@ class PacmanWorld(object):
             PacmanWorld._add_wall(x=x, y=upper_border)
             PacmanWorld._add_wall(x=x, y=lower_border)
 
-    def set_element(self, element_type, row, col):
-        self.world[row][col] = element_type
 
     def _add_wall(x, y):
         base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
