@@ -36,12 +36,33 @@ class PacmanWorld(object):
 
             prevs = self.row, self.col
 
+            if False:
+                if abs(row - rounded_row) == 0 or abs(col - rounded_col) == 0:
+                    self.row = rounded_row
+                    self.col = rounded_col
+
             if abs(row - rounded_row) == 0:
                 self.row = rounded_row
             if abs(col - rounded_col) == 0:
                 self.col = rounded_col
 
             return prevs
+
+
+        def available_directions(self, worldmap):
+            available = filter(
+                lambda d: worldmap[self.row+d.row][self.col+d.col] != MapObjects.WALL,
+                Direction)
+
+            pene = list(available)
+            if False:
+                print("Ghost in {},{} -> {}".format(self.col, self.row, pene))
+                for row in worldmap:
+                    print([elem.value for elem in row])
+
+            return pene
+
+
 
 
     def __init__(self):
@@ -52,9 +73,7 @@ class PacmanWorld(object):
         self.__ghosts = None
 
         self.__settings = base.Settings()
-
-    def _add_wall(x, y):
-        base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
+        self.__flag = False
 
 
     def __init(self, nrows, ncols):
@@ -67,7 +86,8 @@ class PacmanWorld(object):
 
     def update_coords(self, character, dt):
         """Update character's coordinates both in gui and in the matrix.
-        Return True if the character moved, False otherwise. """
+        Return True if the character has been moved, False otherwise. """
+
         entity_type = MapObjects.PLAYER if isinstance(character.entity, Player) else MapObjects.GHOST
         #update position in gui
         character.entity.update(dt)
@@ -84,19 +104,49 @@ class PacmanWorld(object):
 
     def update(self, dt):
         """ Update the status of all moving objects """
-        self.update_coords(self.pacman, dt)
+
+        if self.update_coords(self.pacman, dt):
+            print("Pacman in {},{}".format(self.pacman.col, self.pacman.row))
+            pass#print(self.pacman.available_directions(self.world))
 
         for ghost in self.ghosts:
-            self.update_coords(ghost, dt)
+            if self.update_coords(ghost, dt):
+                #get info about current direction
+                next_cell = self.world[ghost.row + ghost.direction.row][ghost.col + ghost.direction.col]
 
-            #get info about current direction
-            c_direction, r_direction, _ = ghost.direction.value
+                if next_cell == MapObjects.WALL:
+                    #get available directions
+                    actions = ghost.available_directions(self.world)
 
-            if self.world[ghost.row+r_direction][ghost.col+c_direction] == MapObjects.WALL:
-                print("muro")
-                #invert movement direction if there is a wall in front of him
-                ghost.entity.direction = Direction.invert_direction(ghost.entity.direction)
-                ghost.direction = ghost.entity.direction
+                    #remove the inverse direction from the available ones (it is present for sure)
+                    #it is the default one, if no other directions are available
+                    chosen_direction = Direction.invert_direction(ghost.entity.direction)
+                    actions.remove(chosen_direction)
+
+                    #find best direction from available ones
+                    if len(actions) > 0:
+                        def manhattan_distance(pacman, ghost, direction):
+                            return abs(pacman.row - ghost.row - direction.row) + abs(pacman.col - ghost.col - direction.col)
+
+                        costs = [(action, manhattan_distance(self.pacman, ghost, action)) for action in actions]
+                        best_action, min_cost = min(costs, key=lambda t: t[1])
+
+                        #check if the best action is better than the default one
+                        if min_cost <= manhattan_distance(self.pacman, ghost, chosen_direction):
+                            chosen_direction = best_action
+
+
+            #        print("in {},{} ({}). Going {}".format(ghost.col, ghost.row, actions, chosen_direction))
+                    ghost.direction = chosen_direction
+                    ghost.entity.direction = ghost.direction
+
+
+#                    if len(actions) == 1:
+#                    ghost.entity.direction = actions[0]
+        #            print("murooo")
+                    #invert movement direction if there is a wall in front of him
+#                    ghost.entity.direction = Direction.invert_direction(ghost.entity.direction)
+#                    ghost.direction = ghost.entity.direction
 
 
 
@@ -188,7 +238,6 @@ class PacmanWorld(object):
         except LevelError as e:
             logging.error(e.default_message())
 
-
         return world
 
     @staticmethod
@@ -217,6 +266,9 @@ class PacmanWorld(object):
 
     def set_element(self, element_type, row, col):
         self.world[row][col] = element_type
+
+    def _add_wall(x, y):
+        base.walls.append(pyglet.sprite.Sprite(img=base.wall.img, x=x, y=y, batch=base.field_batch))
 
 
 class LevelError(Exception):

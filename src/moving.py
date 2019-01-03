@@ -11,6 +11,22 @@ class Direction(enum.Enum):
     LEFT = (-1, 0, 180)
     RIGHT = (1, 0, 0)
 
+    @property
+    def row(self):
+        #magic minus sign fixes all the problemz
+        return -self.value[1]
+
+    @property
+    def col(self):
+        return self.value[0]
+
+    def __repr__(self):
+        if self is Direction.UP:
+            return "up"
+        if self is Direction.DOWN:
+            return "down"
+        return "left" if self is Direction.LEFT else "right"
+
     @classmethod
     def get_direction(cls, sprite):
         """Returns the enum value corresponding to the pressed key"""
@@ -109,9 +125,3 @@ class Ghost(MovingObject):
 
     def update(self, dt = 0):
         super().update(self.direction, dt)
-
-
-# def update(dt):
-#     """ very simply but important function that update the status of all moving objects """
-#     for obj in MovingObject.collection:
-#         obj.update(dt)
