@@ -17,7 +17,6 @@ if __name__ == '__main__':
     world = PacmanWorld.parse_map_file("level1.txt")
     base.window.push_handlers(world.pacman.entity.key_handler)
 
-#    pyglet.clock.schedule_interval(moving.update, 1/120.0)
     pyglet.clock.schedule_interval(world.update, 1/120.0)
     #level.create_borders() #create full border
     pyglet.app.run()

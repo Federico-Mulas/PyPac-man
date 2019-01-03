@@ -61,7 +61,11 @@ class MovingObject(pyglet.sprite.Sprite):
         self.velocity = self.image.width * 7/3
         self.last_move = None
 
+        self.direction = Direction.LEFT
 
+    def set_coordinates(self, x, y):
+        self.x, self.y = x, y
+        return self
 
     def collision(self, obj):
         min_x_dist = (self.width + obj.width) / 2
@@ -75,7 +79,7 @@ class MovingObject(pyglet.sprite.Sprite):
         if dt == 0:
             return
 
-        old_coords = self.x, self.y
+        _x, _y = self.x, self.y
         last_move = self.last_move
 
         if move:
@@ -87,17 +91,16 @@ class MovingObject(pyglet.sprite.Sprite):
 
         for wall in base.walls:
             if self.collision(wall):
-                self.x, self.y = old_coords
+                self.set_coordinates(_x, _y)
                 self.last_move = last_move
                 break
 
         self.check_bounds()
 
     def check_bounds(self):
-        min_x = -self.image.width // 2
-        min_y = -self.image.height // 2
-        max_x = base.window.width + self.image.width // 2
-        max_y = base.window.height + self.image.height // 2
+        min_x, min_y = -self.image.width // 2, -self.image.height // 2
+        max_x, max_y = base.window.width - min_x, base.window.height - min_y
+
         if self.x < min_x:
             self.x = max_x
         elif self.x > max_x:
@@ -121,7 +124,6 @@ class Player(MovingObject):
 class Ghost(MovingObject):
     def __init__(self, *args, **kwargs):
         MovingObject.__init__(self, img=base.ghost.img, *args, **kwargs)
-        self.direction = Direction.LEFT
 
     def update(self, dt = 0):
         super().update(self.direction, dt)
