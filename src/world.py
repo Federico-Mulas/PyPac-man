@@ -1,8 +1,9 @@
 import enum
-import pyglet
 import logging
-import base
+import pyglet
 import random
+
+import base
 from moving import MovingObject, Player, Ghost, Direction
 
 class MapObjects(enum.Enum):
@@ -80,6 +81,11 @@ class PacmanWorld(object):
         @property
         def col(self):
             return self.__col
+
+        def distance(self, other, action):
+            """Compute Manhattan distance between the two entities considering
+            that 'self' will perform the selected action"""
+            return abs(other.row - self.row - action.row) + abs(other.col - self.col - action.col)
 
         def update_coords(self):
 #            """ Update object coordinates (locally in the object) and return previous coordinates. """
@@ -186,25 +192,18 @@ class PacmanWorld(object):
                 #get available directions
                 actions = ghost.available_directions(self)
                 #remove the inverse direction from the available ones (it is present for sure)
-                #it is the default one, if no other directions are available
+                #it will be selected if and only if no other directions are available
                 chosen_direction = Direction.invert_direction(ghost.entity.direction)
                 actions.remove(chosen_direction)
 
                 #find best direction from available ones
                 if len(actions) > 0:
-                    def manhattan_distance(pacman, ghost, direction):
-                        return abs(pacman.row - ghost.row - direction.row) + abs(pacman.col - ghost.col - direction.col)
-
                     #calculate actions' costs
-                    costs = [(action, manhattan_distance(self.pacman, ghost, action)) for action in actions]
+                    costs = [(action, ghost.distance(self.pacman, action)) for action in actions]
                     #get minimum cost
                     min_cost = min(costs, key=lambda pair: pair[1])[1]
                     #get random action with minimum cost
-                    best_action = random.choice([action for action, cost in costs if cost == min_cost])
-
-                    #check if the best action is better than the default one
-                    if min_cost <= manhattan_distance(self.pacman, ghost, chosen_direction):
-                        chosen_direction = best_action
+                    chosen_direction = random.choice([action for action, cost in costs if cost == min_cost])
 
                 logging.info("planning in {},{}. available: {}, decision: {}".format(ghost.row, ghost.col, actions, chosen_direction))
 
