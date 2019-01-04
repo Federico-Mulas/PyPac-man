@@ -60,8 +60,7 @@ class MovingObject(pyglet.sprite.Sprite):
 
         self.velocity = self.image.width * 7/3
         self.last_move = None
-
-        self.direction = Direction.LEFT
+        self.direction = None
 
     def set_coordinates(self, x, y):
         self.x, self.y = x, y

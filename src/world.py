@@ -63,8 +63,10 @@ class PacmanWorld(object):
             #entity's coordinates in the matrix
             self.__row = None
             self.__col = None
+            #spawning point coordinate (row, col)
+            self.__spawn = None
             #movement direction
-            self.direction = moving_obj.direction
+            self.__direction = moving_obj.direction
             #Player or Ghost object
             self.entity = moving_obj
             self.type = MapObjects.PLAYER if isinstance(moving_obj, Player) else MapObjects.GHOST
@@ -78,6 +80,19 @@ class PacmanWorld(object):
         @property
         def col(self):
             return self.__col
+
+        @property
+        def direction(self):
+            return self.__direction
+
+        @direction.setter
+        def direction(self, value):
+            self.__direction = self.entity.direction = value
+
+        def set_spawn(self, row, col):
+            self.__spawn = row, col
+            return self
+
 
         def next_move(self, world):
             if self.type is MapObjects.GHOST:
@@ -201,14 +216,17 @@ class PacmanWorld(object):
     def update(self, dt):
         """ Update the status of all moving objects """
 
+        #update ghosts
         for ghost in self.ghosts:
             if self.update_coords(ghost, dt):
                 ghost.next_move(self)
         else:
+            #then update pacman
             self.update_coords(self.pacman, dt)
 
 
     def __str__(self):
+        """Print the current state of the world"""
         return str("\n".join([str(row) for row in self.world]))
 
     @staticmethod
@@ -242,9 +260,9 @@ class PacmanWorld(object):
             # Using upper left border as origin
             world.__settings.origin_x = world.__settings.step / 2
             world.__settings.origin_y = base.window.height - world.__settings.step / 2
-#            print(world.__settings.origin_x, world.__settings.origin_y, world.__settings.step)
 
             world.__init(n_rows, n_cols)
+            ghost_list = list()
 
             for r, line in enumerate(source):
                 line = line.strip()
@@ -269,19 +287,18 @@ class PacmanWorld(object):
                     elif elem == MapObjects.PLAYER_SPAWN.value:
                         #instantiate pacman in the current position
                         pacman = Player().set_coordinates(x_coord, y_coord)
-                        #set spawning point
+                        #set spawning point in the map
                         world.set_element(MapObjects.PLAYER_SPAWN, r, c)
-                        world.pacman = PacmanWorld.PacmanEntity(pacman, world.__settings)
+                        world.pacman = PacmanWorld.PacmanEntity(pacman, world.__settings).set_spawn(r, c)
 
                         logging.info("PLAYER SPAWN in {}, {}".format(x_coord, y_coord))
 
                     elif elem == MapObjects.GHOST_SPAWN.value:
                         #instantiate a ghost in the current position
                         ghost = Ghost().set_coordinates(x_coord, y_coord)
-
-                        #set spawning point
+                        ghost_list.append(PacmanWorld.PacmanEntity(ghost, world.__settings).set_spawn(r, c))
+                        #set spawning point in the map
                         world.set_element(MapObjects.GHOST_SPAWN, r, c)
-                        world.ghosts.append(PacmanWorld.PacmanEntity(ghost, world.__settings))
 
                         logging.info("GHOST SPAWN in {}, {}".format(x_coord, y_coord))
 
@@ -290,6 +307,11 @@ class PacmanWorld(object):
 
         except LevelError as e:
             logging.error(e.default_message())
+
+        #initialize ghosts' direction based on available ones
+        for ghost in ghost_list:
+            ghost.direction = random.choice(ghost.available_directions(world))
+            world.ghosts.append(ghost)
 
         return world
 
