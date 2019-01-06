@@ -57,7 +57,7 @@ class PacmanWorld(object):
             return "".join([v.value for v in self.__content])
 
     class PacmanEntity(object):
-        """ """
+        """Representation of a moving entity (pacman or ghost) living in the world. """
         def __init__(self, moving_obj, settings):
             self.__settings = settings
             #entity's coordinates in the matrix
@@ -73,6 +73,7 @@ class PacmanWorld(object):
 
             self.update_coords()
 
+        #getters and setters
         @property
         def row(self):
             return self.__row
@@ -181,6 +182,10 @@ class PacmanWorld(object):
 
         self.pacman = None
         self.ghosts = list()
+
+    @property
+    def dimension(self):
+        return self.__map_size
 
     def __getitem__(self, key):
         """Get the element in the [row, col] cell"""
